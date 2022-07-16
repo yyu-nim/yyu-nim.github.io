@@ -1,0 +1,15 @@
+---
+layout: post
+title:  "헬로 월드"
+date:   2022-07-16 10:35:01 +0900
+categories: jekyll test
+---
+
+글이 잘 출판되는지 테스트...
+
+{% highlight rust %}
+fn main() {
+    println!("Hello, world!");
+}
+{% endhighlight %}
+
