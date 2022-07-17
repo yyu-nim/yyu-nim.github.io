@@ -7,6 +7,7 @@ categories: podcast design
 
 RAFT, Log Structured File System, ... 등 학계/산업계에 중요한 영향을 끼친 많은 결과물을 만들어 온, 
 스탠포드의 John Ousterhout 교수님의 소프트웨어 디자인에 대한 최근 견해를 들어본다.
+한번에 디자인이 잘 되는 경우는 없고, 보통 세번은 메이저 리비전을 겪게 되는 경우가 많다고...
 
 
 [팟캐스트 링크](https://www.se-radio.net/2022/07/episode-520-john-ousterhout-on-a-philosophy-of-software-design/)
