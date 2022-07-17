@@ -1,0 +1,13 @@
+---
+layout: post
+title:  "Diagram 테스트"
+date:   2022-07-17 09:14:00 +0900
+categories: diagram jekyll
+---
+
+{% blockdiag %}
+blockdiag {
+A -> B -> C -> D;
+A -> E -> F -> G;
+}
+{% endblockdiag %}

@@ -33,6 +33,7 @@ github_username:  jekyll
 theme: minima
 plugins:
   - jekyll-feed
+  - jekyll-diagrams
 
 # Exclude from processing.
 # The following items will not be processed, by default.
@@ -53,3 +54,12 @@ plugins:
 #   - vendor/cache/
 #   - vendor/gems/
 #   - vendor/ruby/
+
+jekyll-diagrams:
+  graphviz:
+  # configurations for graphviz
+  blockdiag:
+  # configurations for blockdiag
+  syntrax:
+  # configurations for syntrax
+  # and so on
