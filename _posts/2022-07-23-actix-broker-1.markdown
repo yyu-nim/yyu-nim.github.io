@@ -13,7 +13,8 @@ TestDriver ------ GracefulShutdowner ------- PosAccessor
                                          |
                                          --- DbAccessor
 ```
-위와 같이 actor 들을 구성해볼 수 있다.
+위와 같이 actor들을 구성해볼 수 있다. 다만, 본 예제에서는 actor broker의 사용법을 위해,
+actor간 직접 메시지 교환하기 보다는 broker에 issue/subscribe하는 방식을 사용한다.
 * `TestDriver` -> `GracefulShutdowner` : 3 초후 graceful shutdown 하라는 메시지 보냄
 * `GracefulShutdowner` -> `PosAccessor`, `PeerAccessor`, `DbAccessor`: shutdown을 준비하라는 메시지 보냄
 * `PosAccessor`, `PeerAccessor`, `DbAccessor` -> `GracefulShutdowner`: shutdown 준비되었다는 메시지 보냄
