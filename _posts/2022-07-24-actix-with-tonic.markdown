@@ -221,7 +221,30 @@ actix-broker = "0.4.3"
 tonic = "0.7"
 prost = "0.10"
 rand = "0.8.5"
+tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
 
 [build-dependencies]
 tonic-build = "0.7"
+```
+
+#### Executions
+```bash
+# terminal 1
+$ cargo run --bin helloworld-server
+```
+
+```bash
+# terminal 2
+$ cargo run --bin helloworld-client-actor
+...
+actor= 0, num_reqs_processed = 1024
+actor= 1, num_reqs_processed = 983
+actor= 2, num_reqs_processed = 999
+actor= 3, num_reqs_processed = 1040
+actor= 4, num_reqs_processed = 1013
+actor= 5, num_reqs_processed = 951
+actor= 6, num_reqs_processed = 1051
+actor= 7, num_reqs_processed = 963
+actor= 8, num_reqs_processed = 965
+actor= 9, num_reqs_processed = 1011
 ```
