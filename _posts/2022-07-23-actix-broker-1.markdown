@@ -15,6 +15,17 @@ TestDriver ------ GracefulShutdowner ------- PosAccessor
 ```
 위와 같이 actor들을 구성해볼 수 있다. 다만, 본 예제에서는 actor broker의 사용법을 위해,
 actor간 직접 메시지 교환하기 보다는 broker에 issue/subscribe하는 방식을 사용한다.
+그럴 경우 topology는, 아래와 같아진다.
+```markdown
+TestDriver      GracefulShutdowner   PosAccessor  PeerAccessor  DbAccessor
+    |                     |               |             |            |
+    ------------------------------------------------------------------
+                                   |
+                             ActixBroker
+```
+
+
+
 * `TestDriver` -> `GracefulShutdowner` : 3 초후 graceful shutdown 하라는 메시지 보냄
 * `GracefulShutdowner` -> `PosAccessor`, `PeerAccessor`, `DbAccessor`: shutdown을 준비하라는 메시지 보냄
 * `PosAccessor`, `PeerAccessor`, `DbAccessor` -> `GracefulShutdowner`: shutdown 준비되었다는 메시지 보냄
@@ -207,4 +218,31 @@ fn main() {
     sys.run().unwrap();
     println!("Done");
 }
+```
+
+실행하면,
+```bash
+$ cargo run
+Starting
+GracefulShutdowner started
+PosAccessor started
+PeerAccessor started
+DbAccessor started
+TestDriver started. After 3 seconds, we inject shutdown message
+TestDriver is injecting graceful shutdown request
+GracefulShutdowner is starting to shut down... msg = GracefulShutdownMsg
+PosAccessor is preparing for a shutdown... msg = PrepareShutdownMsg
+PosAccessor has finished its all outstanding I/Os to POS
+PeerAccessor is preparing for a shutdown... msg = PrepareShutdownMsg
+PeerAccessor has finished its all outstanding I/Os to Peer Replicator
+DbAccessor is preparing for a shutdown... msg = PrepareShutdownMsg
+DbAccessor has finished its all outstanding I/Os to DB
+GracefulShutdowner has received a ready message from PosAccessor
+GracefulShutdowner is still waiting for more ready message... 1/3
+GracefulShutdowner has received a ready message from PeerAccessor
+GracefulShutdowner is still waiting for more ready message... 2/3
+GracefulShutdowner has received a ready message from DbAccessor
+GracefulShutdowner has received ready messages from all participants... 3/3. Stopping actor system...
+Bye!
+Done
 ```
