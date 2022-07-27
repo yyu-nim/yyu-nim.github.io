@@ -12,7 +12,7 @@ failure handling 전략으로 보이며, 추후에는 escalation, restart condit
 아래의 예제는 `MyActor`를 의도적으로 3번 stop 시키고, 
 마지막에는 몇번 restart되었는지를 확인하여 표준 출력하는 프로그램이다.
 
-```mermaid!
+```mermaid
 sequenceDiagram
     participant SystemRunner
     participant MyActor
