@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "actix-broker <2> - grpc tonic integration"
+title:  "actix <2> - grpc tonic integration"
 date:   2022-07-24 08:00:00 +0900
 categories: actix broker rust tonic
 ---

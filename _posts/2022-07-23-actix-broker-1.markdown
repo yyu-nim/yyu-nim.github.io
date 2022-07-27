@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "actix-broker <1> - graceful shutdown"
+title:  "actix <1> - graceful shutdown with actix-broker"
 date:   2022-07-23 21:30:00 +0900
 categories: actix broker rust
 ---
