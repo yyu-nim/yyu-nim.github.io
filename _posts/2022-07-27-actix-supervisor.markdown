@@ -90,3 +90,12 @@ fn main() {
     sys.run();
 }
 ```
+
+실행하면, 다음과 같다.
+```bash
+$ cargo run
+restarting 1 times...
+restarting 2 times...
+restarting 3 times...
+MyActor has restarted 3 times
+```
