@@ -26,6 +26,14 @@ sequenceDiagram
     MyActor->>SystemRunner: 3
 ```
 
+{% mermaid %}
+graph TD;
+A-->B;
+A-->C;
+B-->D;
+C-->D;
+{% endmermaid %}
+
 `actix::Supervised::restarting()` 에서 `self.num_restarted` 의
 값이 reset되지 않고 이전 값이 남아 있음을 관심있게 볼 것. 
 즉 actor를 재시작한다고 해서 가지고 있던 상태를 초기화하는 것이 아니고, 

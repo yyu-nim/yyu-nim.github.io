@@ -6,10 +6,10 @@ categories: actix rust recipient actor
 ---
 
 Actix에서 actor에게 메시지를 보낼 때, 두 종류의 addressing을 사용할 수 있다.
-한 가지는 Addr<T> 이고, 다른 한 가지는 Recipient<R> 이다. 둘 모두
+한 가지는 `Addr<T>` 이고, 다른 한 가지는 `Recipient<R>` 이다. 둘 모두
 `do_send`, `send` 를 사용하여 메시지를 보내기 때문에 유사해 보이는데,
-결정적인 차이는, Addr의 generic type "T"는 actor type이 들어가고,
-Recipient의 generic type "R"은 message type이 들어간다는 점이다.
+결정적인 차이는, Addr의 generic type `T`는 actor type이 들어가고,
+Recipient의 generic type `R`은 message type이 들어간다는 점이다.
 즉, message를 보낼 때 받고자 하는 Actor의 정확한 type을 항상 알 수 있는 경우라면
 `Addr`을 쓰면 되고, 특정 메시지의 핸들러만 구현 여부만 중요하다면 
 `Recipient`를 쓰면 된다.
