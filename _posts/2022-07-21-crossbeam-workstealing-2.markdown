@@ -24,11 +24,16 @@ fn main() {
         let handle = thread::spawn(move || {
             let mut num_processed = 0;
             loop {
-                if let Steal::Success(_) = worker.steal() {
-                    num_processed += 1;
-                } else {
-                    println!("Worker {worker_num} has processed {num_processed} works");
-                    break;
+                let work = worker.steal();
+                match work {
+                    Steal::Empty => {
+                        println!("Worker {worker_num} has processed {num_processed} works");
+                        break;
+                    }
+                    Steal::Success(_) => {
+                        num_processed += 1;
+                    }
+                    Steal::Retry => continue,
                 }
             }
         });
@@ -42,21 +47,19 @@ fn main() {
 }
 ```
 
+`worker.steal()`의 결과로 `Steal::Retry`가 나올 경우가 있음에 유의하고 반드시 처리해주어야 함.
+
 ```bash
 $ cargo run
-Worker 2 has processed 0 works
-Worker 0 has processed 0 works
-Worker 3 has processed 253 works
-Worker 5 has processed 0 works
-Worker 1 has processed 60 works
-Worker 4 has processed 0 works
-Worker 7 has processed 0 works
-Worker 6 has processed 424 works
-Worker 9 has processed 0 works
-Worker 8 has processed 999263 works
+Worker 1 has processed 107729 works
+Worker 5 has processed 93090 works
+Worker 0 has processed 99753 works
+Worker 3 has processed 96996 works
+Worker 8 has processed 103692 works
+Worker 2 has processed 100445 works
+Worker 6 has processed 97571 works
+Worker 4 has processed 101253 works
+Worker 9 has processed 100601 works
+Worker 7 has processed 98870 works
 The number of remaining works: 0
 ```
-
-실행 결과를 보면, 특정 worker들만 일들을 가져가고 있는 현상들이 있는데
-OS의 스케줄링 문제인지 crossbeam을 잘못 사용하고 있는 것인지 
-확인이 필요함.
