@@ -18,12 +18,11 @@
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
 
-title: Your awesome title
+title: Production-ready Rust Libraries (PRL)
 email: your-email@example.com
 description: >- # this means to ignore newlines until "baseurl:"
-  Write an awesome description for your new site here. You can edit this
-  line in _config.yml. It will appear in your document head meta (for
-  Google search results) and in your feed.xml site description.
+  RUST로 Production Service를 개발하기 위해 필요한 지식들을 모으고, 공유하기.
+
 baseurl: "" # the subpath of your site, e.g. /blog
 url: "" # the base hostname & protocol for your site, e.g. http://example.com
 twitter_username: jekyllrb
@@ -31,6 +30,10 @@ github_username:  jekyll
 
 # Build settings
 theme: minima
+##### hitchens-theme #####
+#theme: hitchens-theme
+#ignore_theme_config: true
+##########################
 plugins:
   - jekyll-feed
   - jekyll-diagrams
