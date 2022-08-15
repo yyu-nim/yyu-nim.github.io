@@ -85,13 +85,13 @@ Ship 8 is attacking!
 Victory!
 ```
 
-`Open Fire`의 실행 시점은 async runtime에 특성에 기인한 것으로, 
+`Open Fire`가 attacking 중간에 출력된 것은 async runtime에 특성에 기인한 것으로, 
 `WaitGroup`의 정확성과는 크게 관계가 없으므로 무시할 수 있다.
 여기서 중요한 것은, 
 
-* 모든 배들이 준비가 된 이후에야, "attacking"이 시작될 수 있다는 점
+* 모든 배들이 준비가 된 이후에야, "Open Fire"가 될 수 있다는 점
 * 모든 배들이 "attacking"을 한 이후에야, "Victory"가 될 수 있다는 점
 
-이다. 만약 `attacking`이 `holding its fire` 이전에 한번이라도 찍혔다던지,
+이다. 만약 `Open Fire`가 `holding its fire` 이전에 찍혔다던지,
 `Victory`가 `attacking`보다 먼저 찍혔다던지 하면, 예제 프로그램의 버그를
 의심해 보아야 할 것.
