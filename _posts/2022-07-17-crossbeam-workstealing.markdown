@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "Crossbeam work-stealing queue"
+title:  "crossbeam <1> - work-stealing queue I"
 date:   2022-07-17 09:25:00 +0900
 categories: rust crossbeam
 ---
