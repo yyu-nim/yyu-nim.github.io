@@ -75,7 +75,6 @@ fn main() {
     let mut sender = event_sender();
     sender.send(EventType::REPORT_WORK);
     sender.send(EventType::POISONPILL);
-    sender.send(EventType::POISONPILL);
     wg_receivers.wait();
 }
 
