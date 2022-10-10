@@ -96,7 +96,7 @@ row를 생성하라는 의미로 해석된다.
 string을 저장하도록 한다. mini tectonic의 입장에서, 주어진 `dir_path`에 해당하는
 `dir_id`를 reverse lookup 하고 싶을 가능성이 높으므로, `dir_path`에도 index를 생성한다.
 2. `Name` 테이블을 생성하고, 네 개의 컬럼을 생성한다: `Parent`, `Child`, `ChildType`, and `Value`.
-(Parent, Child)로 composite key를 정하고, ChildType은 `Dir` 혹은 `File` 이라는 
+(Parent, Child)로 index를 만들고, ChildType은 `Dir` 혹은 `File` 이라는 
 값만을 가질 수 있도록 제약을 둔다. `Name` 테이블의 primary key는 auto increment id로
 하도록 해서, row id를 직접 사용하지는 말고 그냥 고유의 키를 주는 것으로만 쓰도록 한다.
 
@@ -125,8 +125,10 @@ CREATE TABLE name (
     value VARCHAR,
     FOREIGN KEY(parent) REFERENCES dentry(id)
 );
+CREATE INDEX parent_child ON name (parent, child);
 
 $ cat migrations/2022-10-10-034509_name-layer/down.sql
+drop index parent_child;
 drop table name;
 drop index pathindex;
 drop table dentry;
@@ -181,6 +183,7 @@ CREATE TABLE name (
     value VARCHAR,
     FOREIGN KEY(parent) REFERENCES dentry(id)
 );
+CREATE INDEX parent_child ON name (parent, child);
 ```
 
 두번째 DB migration을 마쳤다! 아직은 코드를 짤 때가 아니고, File / Block 레이어까지
