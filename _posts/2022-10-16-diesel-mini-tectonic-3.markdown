@@ -1,8 +1,8 @@
 ---
 layout: post
 title:  "diesel <3> - mini tectonic in rust - file layer"
-date:   2022-10-10 08:00:00 +0930
-categories: rust diesel facebook tectonic metadata name
+date:   2022-10-16 23:00:00 +0930
+categories: rust diesel facebook tectonic metadata file
 ---
 
 이번에는 `File` 레이어의 스키마를 구현해보도록 하자. tectonic 논문의 테이블을 다시 살펴보면,
