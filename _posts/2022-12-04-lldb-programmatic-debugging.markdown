@@ -23,7 +23,7 @@ telemetry pipeline으로 전달되지 않았다면 활용에 한계가 있고, �
 
 디버그 코드를 삽입하는 방식은, 앞의 두 방식보다 수월하게
 디버깅 정보를 취합할 수 있도록 해주는데, 1) 프로세스의 상태에 손쉽게 접근이 가능하고 (자신의
-주소 공간에 접근하면 되므로, 2) 프로세스 상태를 요약/계산하기 위해 프로그래밍 언어를
+주소 공간에 접근하면 되므로), 2) 프로세스 상태를 요약/계산하기 위해 프로그래밍 언어를
 그대로 사용할 수 있다는 점 덕분이다. 다만, 디버그 코드가 삽입된 이후에 재현 평가를 통해, 
 버그 상황의 프로세스 상태에 재진입해야 원하는 정보를 취합할 수 있다는 점이 큰 단점이
 될 것이다. 즉, `버그 발생 -> 취합되어야 할 정보를 파악하여 디버그 코드 삽입 -> 버그 재현`의
@@ -80,8 +80,8 @@ $ export LLVM_BUILD_ROOT=/Users/yyu-nim/llvm-project/lldb
     Finished dev [unoptimized + debuginfo] target(s) in 0.03s
      Running `target/debug/lldb-debug1`
 dyld[33438]: Library not loaded: @rpath/LLDB.framework/Versions/A/LLDB
-  Referenced from: <5B405FB6-9FC2-35DE-B823-3EE5B470BF39> /Users/lefoot/CLionProjects/lldb-debug1/target/debug/lldb-debug1
-  Reason: tried: '/System/Volumes/Preboot/Cryptexes/OS@rpath/LLDB.framework/Versions/A/LLDB' (no such file), '/Library/Frameworks/LLDB.framework/Versions/A/LLDB' (no such file), '/System/Library/Frameworks/LLDB.framework/Versions/A/LLDB' (no such file, not in dyld cache)
+  Referenced from: <5B405FB6-9FC2-35DE-B823-3EE5B470BF39> /Users/yyu-nim/lldb-debug1/target/debug/lldb-debug1
+  Reason: tried: '/System/Volumes/Preboot/Cryptexes/OS@rpath/LLDB.framework/Versions/A/LLDB' (no such file), '/Library/Frameworks/LLDB.framework/Versions/A/LLDB' (no such file), '/System/Library/Frameworks/LLDB.framework/Versions/A/LLDB' (no such file, not in dyld cache)  
 zsh: abort      cargo run
 ```
 
