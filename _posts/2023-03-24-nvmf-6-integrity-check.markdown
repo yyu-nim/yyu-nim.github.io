@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "nvmf <6> - end-to-end integrity check"
-date:   2023-03-24 22:00:00 +0930
+date:   2023-03-25 22:00:00 +0930
 categories: rust nvmf chatgpt integrity dif dix
 ---
 
