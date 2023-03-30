@@ -70,6 +70,7 @@ use std::collections::HashMap;
 use std::convert::TryInto;
 use std::error::Error;
 use std::io::{Read, Write};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
 // Define a struct to represent an I/O queue
@@ -85,16 +86,16 @@ impl IoQueue {
     }
 }
 
-async fn handle_client(mut stream_tokio: TcpStream, active_queues: &mut HashMap<u16, IoQueue>) -> Result<(), Box<dyn Error>> {
+async fn handle_client(mut stream: TcpStream, active_queues: &mut HashMap<u16, IoQueue>) -> Result<(), Box<dyn Error>> {
     // Read the command header
     let mut header = [0u8; 28];
-    let mut stream = stream_tokio.into_std()?;
-    stream.read_exact(&mut header)?;
+
+    stream.read_exact(&mut header).await?;
 
     // Parse the command header
     let opcode = header[0];
     let flags = header[1];
-    let cid = u32::from_le_bytes(header[4..8].try_into().unwrap());
+    let cid = u16::from_le_bytes(header[4..8].try_into().unwrap());
     let nsid = u32::from_le_bytes(header[8..12].try_into().unwrap());
     let qid = u16::from_le_bytes(header[14..16].try_into().unwrap());
     let sqsize = u16::from_le_bytes(header[16..18].try_into().unwrap());
@@ -110,13 +111,13 @@ async fn handle_client(mut stream_tokio: TcpStream, active_queues: &mut HashMap<
             if active_queues.contains_key(&qid) {
                 // Queue already exists
                 let response = [0x00, 0x80, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00];
-                stream.write_all(&response)?;
+                stream.write_all(&response);
             } else {
                 // Create new I/O queue
-                let queue = IoQueue::new(nsid, cid, sqsize as u32);
+                let queue = IoQueue::new(nsid, cid as u32, sqsize as u32);
                 active_queues.insert(qid, queue);
                 let response = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
-                stream.write_all(&response)?;
+                stream.write_all(&response);
             }
         }
         0x01 => {
@@ -127,7 +128,7 @@ async fn handle_client(mut stream_tokio: TcpStream, active_queues: &mut HashMap<
             }
             // Send a success response
             let response = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
-            stream.write_all(&response)?;
+            stream.write_all(&response);
         }
         0x02 => {
             // Identify command.
@@ -140,12 +141,12 @@ async fn handle_client(mut stream_tokio: TcpStream, active_queues: &mut HashMap<
             response[5] = 0x00;
             response[6] = 0x00;
             response[7] = 0x00;
-            stream.write_all(&response)?;
+            stream.write_all(&response);
         }
         0x03 => {
             // Abort command
             let resp = [0u8; 4096];
-            stream.write_all(&resp)?;
+            stream.write_all(&resp);
         }
         0x04 => {
             // Set Features command
@@ -168,127 +169,127 @@ async fn handle_client(mut stream_tokio: TcpStream, active_queues: &mut HashMap<
         }
         0x0A => {
             // Namespace Attachment command
-            let n = NamespaceAttachment::new(stream, active_queues, qid, cid).await?;
+            let n = NamespaceAttachment::new(stream, active_queues, qid, cid);
             n.handle().await?;
         }
         0x0B => {
             // Keep Alive command
-            let k = KeepAlive::new(stream, active_queues, qid, cid).await?;
+            let k = KeepAlive::new(stream, active_queues, qid, cid);
             k.handle().await?;
         }
         0x0C => {
             // Directive Send command
-            let d = DirectiveSend::new(stream, active_queues, qid, cid).await?;
+            let d = DirectiveSend::new(stream, active_queues, qid, cid);
             d.handle().await?;
         }
         0x0D => {
             // Directive Receive command
-            let d = DirectiveReceive::new(stream, active_queues, qid, cid).await?;
+            let d = DirectiveReceive::new(stream, active_queues, qid, cid);
             d.handle().await?;
         }
         0x0E => {
             // Virtualization Management command
-            let v = VirtualizationManagement::new(stream, active_queues, qid, cid).await?;
+            let v = VirtualizationManagement::new(stream, active_queues, qid, cid);
             v.handle().await?;
         }
         0x0F => {
             // NVMe-MI Send command
-            let n = NvmeMiSend::new(stream, active_queues, qid, cid).await?;
+            let n = NvmeMiSend::new(stream, active_queues, qid, cid);
             n.handle().await?;
         }
         0x10 => {
             // NVMe-MI Receive command
-            let n = NvmeMiReceive::new(stream, active_queues, qid, cid).await?;
+            let n = NvmeMiReceive::new(stream, active_queues, qid, cid);
             n.handle().await?;
         }
         0x11 => {
             // Doorbell Buffer Config command
-            let d = DoorbellBufferConfig::new(stream, active_queues, qid, cid).await?;
+            let d = DoorbellBufferConfig::new(stream, active_queues, qid, cid);
             d.handle().await?;
         }
         0x7F => {
             // Format NVM command
-            let f = FormatNvm::new(stream, active_queues, qid, cid).await?;
+            let f = FormatNvm::new(stream, active_queues, qid, cid);
             f.handle().await?;
         }
         0x80 => {
             // Security Send command
-            let s = SecuritySend::new(stream, active_queues, qid, cid).await?;
+            let s = SecuritySend::new(stream, active_queues, qid, cid);
             s.handle().await?;
         }
         0x81 => {
             // Security Receive command
-            let s = SecurityReceive::new(stream, active_queues, qid, cid).await?;
+            let s = SecurityReceive::new(stream, active_queues, qid, cid);
             s.handle().await?;
         }
         0x82 => {
             // Sanitize command
-            let s = Sanitize::new(stream, active_queues, qid, cid).await?;
+            let s = Sanitize::new(stream, active_queues, qid, cid);
             s.handle().await?;
         }
         0x83 => {
             // Get Log Page command
-            let g = GetLogPage::new(stream, active_queues, qid, cid).await?;
+            let g = GetLogPage::new(stream, active_queues, qid, cid);
             g.handle().await?;
         }
         0x84 => {
             // Get LBA Status command
-            let g = GetLbaStatus::new(stream, active_queues, qid, cid).await?;
+            let g = GetLbaStatus::new(stream, active_queues, qid, cid);
             g.handle().await?;
         }
         0x85 => {
             // Read command
-            let r = Read::new(stream, active_queues, qid, cid).await?;
+            let r = ReadCommand::new(stream, active_queues, qid, cid);
             r.handle().await?;
         }
         0x86 => {
             // Write command
-            let w = Write::new(stream, active_queues, qid, cid).await?;
+            let w = WriteCommand::new(stream, active_queues, qid, cid);
             w.handle().await?;
         }
         0x87 => {
             // Write Uncorrectable command
-            let w = WriteUncorrectable::new(stream, active_queues, qid, cid).await?;
+            let w = WriteUncorrectable::new(stream, active_queues, qid, cid);
             w.handle().await?;
         }
         0x88 => {
             // Compare command
-            let c = Compare::new(stream, active_queues, qid, cid).await?;
+            let c = Compare::new(stream, active_queues, qid, cid);
             c.handle().await?;
         }
         0x89 => {
             // Write Zeroes command
-            let w = WriteZeroes::new(stream, active_queues, qid, cid).await?;
+            let w = WriteZeroes::new(stream, active_queues, qid, cid);
             w.handle().await?;
         }
         0x8A => {
             // Dataset Management command
-            let d = DatasetManagement::new(stream, active_queues, qid, cid).await?;
+            let d = DatasetManagement::new(stream, active_queues, qid, cid);
             d.handle().await?;
         }
         0x8B => {
             // Reservation Register command
-            let r = ReservationRegister::new(stream, active_queues, qid, cid).await?;
+            let r = ReservationRegister::new(stream, active_queues, qid, cid);
             r.handle().await?;
         }
         0x8C => {
             // Reservation Report command
-            let r = ReservationReport::new(stream, active_queues, qid, cid).await?;
+            let r = ReservationReport::new(stream, active_queues, qid, cid);
             r.handle().await?;
         }
         0x8D => {
             // Reservation Acquire command
-            let r = ReservationAcquire::new(stream, active_queues, qid, cid).await?;
+            let r = ReservationAcquire::new(stream, active_queues, qid, cid);
             r.handle().await?;
         }
         0x8E => {
             // Reservation Release command
-            let r = ReservationRelease::new(stream, active_queues, qid, cid).await?;
+            let r = ReservationRelease::new(stream, active_queues, qid, cid);
             r.handle().await?;
         }
         0x90 => {
             // Timestamp command
-            let t = Timestamp::new(stream, active_queues, qid, cid).await?;
+            let t = Timestamp::new(stream, active_queues, qid, cid);
             t.handle().await?;
         }
         0x91 | 0x92 | 0x93 | 0x94 | 0x95 | 0x96 | 0x97 | 0x98 | 0x99 | 0x9A | 0x9B | 0x9C | 0x9D | 0x9E | 0x9F => {
@@ -298,7 +299,7 @@ async fn handle_client(mut stream_tokio: TcpStream, active_queues: &mut HashMap<
                 if queue.qsize == 0 {
                     // Queue is full
                     let response = [0x00, 0x80, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00];
-                    stream.write_all(&response)?;
+                    stream.write_all(&response);
                 } else {
                     // Queue is not full
                     queue.qsize -= 1;
@@ -312,7 +313,7 @@ async fn handle_client(mut stream_tokio: TcpStream, active_queues: &mut HashMap<
                 if queue.qsize == 0 {
                     // Queue is full
                     let response = [0x00, 0x80, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00];
-                    stream.write_all(&response)?;
+                    stream.write_all(&response);
                 } else {
                     // Queue is not full
                     queue.qsize -= 1;
@@ -327,7 +328,7 @@ async fn handle_client(mut stream_tokio: TcpStream, active_queues: &mut HashMap<
         _ => {
             // Unsupported command
             let response = [0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
-            stream.write_all(&response)?;
+            stream.write_all(&response);
         }
     }
 
@@ -354,32 +355,25 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 }
 
-struct Queue {
-    qid: u16,
-    qsize: u16,
-}
-
-impl Queue {
-    fn new(qid: u16, qsize: u16) -> Queue {
-        Queue { qid, qsize }
-    }
-}
-
 struct CreateConnection {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl CreateConnection {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> CreateConnection {
+    fn new(stream: TcpStream, active_queues: HashMap<u16, IoQueue>, qid: u16, cid: u16) -> CreateConnection {
         CreateConnection {
             stream,
             active_queues,
             qid,
             cid,
         }
+    }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
     }
 }
 
@@ -399,6 +393,10 @@ impl CreateConnectionCommandResponse {
             cqsize,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
 }
 
 struct CreateConnectionCommand {
@@ -416,6 +414,11 @@ impl CreateConnectionCommand {
             sqsize,
             cqsize,
         }
+
+    }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
     }
 }
 
@@ -428,13 +431,13 @@ struct CreateConnectionCommandResponse {
 
 struct NamespaceManagement {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl NamespaceManagement {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> NamespaceManagement {
+    fn new(stream: TcpStream, active_queues: HashMap<u16, IoQueue>, qid: u16, cid: u16) -> NamespaceManagement {
         NamespaceManagement {
             stream,
             active_queues,
@@ -442,125 +445,160 @@ impl NamespaceManagement {
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct DatasetManagement {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl DatasetManagement {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> DatasetManagement {
+    fn new(stream: TcpStream, _active_queues: &mut HashMap<u16, IoQueue>, qid: u16, cid: u16) -> DatasetManagement {
         DatasetManagement {
             stream,
-            active_queues,
             qid,
             cid,
+            active_queues: Default::default(),
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct ReservationRegister {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl ReservationRegister {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> ReservationRegister {
+    fn new(stream: TcpStream, _active_queues: &mut HashMap<u16, IoQueue>, qid: u16, cid: u16) -> ReservationRegister {
         ReservationRegister {
             stream,
-            active_queues,
+            active_queues: Default::default(),
             qid,
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct ReservationReport {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl ReservationReport {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> ReservationReport {
+    fn new(stream: TcpStream, _active_queues: &mut HashMap<u16, IoQueue>, qid: u16, cid: u16) -> ReservationReport {
         ReservationReport {
             stream,
-            active_queues,
+            active_queues: Default::default(),
             qid,
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct ReservationAcquire {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl ReservationAcquire {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> ReservationAcquire {
+    fn new(stream: TcpStream, _active_queues: &mut HashMap<u16, IoQueue>, qid: u16, cid: u16) -> ReservationAcquire {
         ReservationAcquire {
             stream,
-            active_queues,
+            active_queues: Default::default(),
             qid,
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct ReservationRelease {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl ReservationRelease {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> ReservationRelease {
+    fn new(stream: TcpStream, _active_queues: &mut HashMap<u16, IoQueue>, qid: u16, cid: u16) -> ReservationRelease {
         ReservationRelease {
             stream,
-            active_queues,
+            active_queues: Default::default(),
             qid,
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct Timestamp {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl Timestamp {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> Timestamp {
+    fn new(stream: TcpStream, _active_queues: &mut HashMap<u16, IoQueue>, qid: u16, cid: u16) -> Timestamp {
         Timestamp {
             stream,
-            active_queues,
+            active_queues: Default::default(),
             qid,
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct Identify {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl Identify {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> Identify {
+    fn new(stream: TcpStream, active_queues: HashMap<u16, IoQueue>, qid: u16, cid: u16) -> Identify {
         Identify {
             stream,
             active_queues,
@@ -568,17 +606,22 @@ impl Identify {
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct Abort {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl Abort {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> Abort {
+    fn new(stream: TcpStream, active_queues: HashMap<u16, IoQueue>, qid: u16, cid: u16) -> Abort {
         Abort {
             stream,
             active_queues,
@@ -586,17 +629,22 @@ impl Abort {
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct SetFeatures {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl SetFeatures {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> SetFeatures {
+    fn new(stream: TcpStream, active_queues: HashMap<u16, IoQueue>, qid: u16, cid: u16) -> SetFeatures {
         SetFeatures {
             stream,
             active_queues,
@@ -604,17 +652,22 @@ impl SetFeatures {
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct GetFeatures {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl GetFeatures {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> GetFeatures {
+    fn new(stream: TcpStream, active_queues: HashMap<u16, IoQueue>, qid: u16, cid: u16) -> GetFeatures {
         GetFeatures {
             stream,
             active_queues,
@@ -622,17 +675,22 @@ impl GetFeatures {
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct AsynchronousEventRequest {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl AsynchronousEventRequest {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> AsynchronousEventRequest {
+    fn new(stream: TcpStream, active_queues: HashMap<u16, IoQueue>, qid: u16, cid: u16) -> AsynchronousEventRequest {
         AsynchronousEventRequest {
             stream,
             active_queues,
@@ -640,17 +698,22 @@ impl AsynchronousEventRequest {
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct AsynchronousEvent {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl AsynchronousEvent {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> AsynchronousEvent {
+    fn new(stream: TcpStream, active_queues: HashMap<u16, IoQueue>, qid: u16, cid: u16) -> AsynchronousEvent {
         AsynchronousEvent {
             stream,
             active_queues,
@@ -658,269 +721,343 @@ impl AsynchronousEvent {
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct NamespaceAttachment {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl NamespaceAttachment {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> NamespaceAttachment {
+    fn new(stream: TcpStream, _active_queues: &mut HashMap<u16, IoQueue>, qid: u16, cid: u16) -> NamespaceAttachment {
         NamespaceAttachment {
             stream,
-            active_queues,
+            active_queues: Default::default(),
             qid,
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct KeepAlive {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl KeepAlive {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> KeepAlive {
+    fn new(stream: TcpStream, _active_queues: &mut HashMap<u16, IoQueue>, qid: u16, cid: u16) -> KeepAlive {
         KeepAlive {
             stream,
-            active_queues,
+            active_queues: Default::default(),
             qid,
             cid,
         }
+    }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
     }
 }
 
 struct DirectiveSend {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl DirectiveSend {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> DirectiveSend {
+    fn new(stream: TcpStream, _active_queues: &mut HashMap<u16, IoQueue>, qid: u16, cid: u16) -> DirectiveSend {
         DirectiveSend {
             stream,
-            active_queues,
+            active_queues: Default::default(),
             qid,
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct DirectiveReceive {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl DirectiveReceive {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> DirectiveReceive {
+    fn new(stream: TcpStream, _active_queues: &mut HashMap<u16, IoQueue>, qid: u16, cid: u16) -> DirectiveReceive {
         DirectiveReceive {
             stream,
-            active_queues,
+            active_queues: Default::default(),
             qid,
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct VirtualizationManagement {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl VirtualizationManagement {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> VirtualizationManagement {
+    fn new(stream: TcpStream, _active_queues: &mut HashMap<u16, IoQueue>, qid: u16, cid: u16) -> VirtualizationManagement {
         VirtualizationManagement {
             stream,
-            active_queues,
+            active_queues: Default::default(),
             qid,
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct NvmeMiSend {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl NvmeMiSend {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> NvmeMiSend {
+    fn new(stream: TcpStream, _active_queues: &mut HashMap<u16, IoQueue>, qid: u16, cid: u16) -> NvmeMiSend {
         NvmeMiSend {
             stream,
-            active_queues,
+            active_queues: Default::default(),
             qid,
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct NvmeMiReceive {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl NvmeMiReceive {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> NvmeMiReceive {
+    fn new(stream: TcpStream, _active_queues: &mut HashMap<u16, IoQueue>, qid: u16, cid: u16) -> NvmeMiReceive {
         NvmeMiReceive {
             stream,
-            active_queues,
+            active_queues: Default::default(),
             qid,
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct DoorbellBufferConfig {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl DoorbellBufferConfig {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> DoorbellBufferConfig {
+    fn new(stream: TcpStream, _active_queues: &mut HashMap<u16, IoQueue>, qid: u16, cid: u16) -> DoorbellBufferConfig {
         DoorbellBufferConfig {
             stream,
-            active_queues,
+            active_queues: Default::default(),
             qid,
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct FormatNvm {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl FormatNvm {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> FormatNvm {
+    fn new(stream: TcpStream, _active_queues: &mut HashMap<u16, IoQueue>, qid: u16, cid: u16) -> FormatNvm {
         FormatNvm {
             stream,
-            active_queues,
+            active_queues: Default::default(),
             qid,
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct SecuritySend {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl SecuritySend {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> SecuritySend {
+    fn new(stream: TcpStream, _active_queues: &mut HashMap<u16, IoQueue>, qid: u16, cid: u16) -> SecuritySend {
         SecuritySend {
             stream,
-            active_queues,
+            active_queues: Default::default(),
             qid,
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct SecurityReceive {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl SecurityReceive {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> SecurityReceive {
+    fn new(stream: TcpStream, _active_queues: &mut HashMap<u16, IoQueue>, qid: u16, cid: u16) -> SecurityReceive {
         SecurityReceive {
             stream,
-            active_queues,
+            active_queues: Default::default(),
             qid,
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct Sanitize {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl Sanitize {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> Sanitize {
+    fn new(stream: TcpStream, _active_queues: &mut HashMap<u16, IoQueue>, qid: u16, cid: u16) -> Sanitize {
         Sanitize {
             stream,
-            active_queues,
+            active_queues: Default::default(),
             qid,
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct GetLogPage {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl GetLogPage {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> GetLogPage {
+    fn new(stream: TcpStream, _active_queues: &mut HashMap<u16, IoQueue>, qid: u16, cid: u16) -> GetLogPage {
         GetLogPage {
             stream,
-            active_queues,
+            active_queues: Default::default(),
             qid,
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct GetLbaStatus {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl GetLbaStatus {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> GetLbaStatus {
+    fn new(stream: TcpStream, _active_queues: &mut HashMap<u16, IoQueue>, qid: u16, cid: u16) -> GetLbaStatus {
         GetLbaStatus {
             stream,
-            active_queues,
+            active_queues: Default::default(),
             qid,
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct FirmwareCommit {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl FirmwareCommit {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> FirmwareCommit {
+    fn new(stream: TcpStream, active_queues: HashMap<u16, IoQueue>, qid: u16, cid: u16) -> FirmwareCommit {
         FirmwareCommit {
             stream,
             active_queues,
@@ -928,17 +1065,22 @@ impl FirmwareCommit {
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct FirmwareImageDownload {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl FirmwareImageDownload {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> FirmwareImageDownload {
+    fn new(stream: TcpStream, active_queues: HashMap<u16, IoQueue>, qid: u16, cid: u16) -> FirmwareImageDownload {
         FirmwareImageDownload {
             stream,
             active_queues,
@@ -946,59 +1088,170 @@ impl FirmwareImageDownload {
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct WriteUncorrectable {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl WriteUncorrectable {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> WriteUncorrectable {
+    fn new(stream: TcpStream, _active_queues: &mut HashMap<u16, IoQueue>, qid: u16, cid: u16) -> WriteUncorrectable {
         WriteUncorrectable {
             stream,
-            active_queues,
+            active_queues: Default::default(),
             qid,
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct Compare {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl Compare {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> Compare {
+    fn new(stream: TcpStream, _active_queues: &mut HashMap<u16, IoQueue>, qid: u16, cid: u16) -> Compare {
         Compare {
             stream,
-            active_queues,
+            active_queues: Default::default(),
             qid,
             cid,
         }
     }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
 }
 
 struct WriteZeroes {
     stream: TcpStream,
-    active_queues: HashMap<u16, Queue>,
+    active_queues: HashMap<u16, IoQueue>,
     qid: u16,
     cid: u16,
 }
 
 impl WriteZeroes {
-    fn new(stream: TcpStream, active_queues: HashMap<u16, Queue>, qid: u16, cid: u16) -> WriteZeroes {
+    fn new(stream: TcpStream, _active_queues: &mut HashMap<u16, IoQueue>, qid: u16, cid: u16) -> WriteZeroes {
         WriteZeroes {
             stream,
-            active_queues,
+            active_queues: Default::default(),
             qid,
             cid,
         }
+    }
+
+    pub async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+
+}
+
+struct ReadCommand {
+    stream: TcpStream,
+    active_queues: HashMap<u16, IoQueue>,
+    qid: u16,
+    cid: u16,
+}
+
+impl ReadCommand {
+    fn new(stream: TcpStream, _active_queues: &mut HashMap<u16, IoQueue>, qid: u16, cid: u16) -> ReadCommand {
+        ReadCommand {
+            stream,
+            active_queues: Default::default(),
+            qid,
+            cid,
+        }
+    }
+
+    async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+}
+
+struct WriteCommand {
+    stream: TcpStream,
+    active_queues: HashMap<u16, IoQueue>,
+    qid: u16,
+    cid: u16,
+}
+
+impl WriteCommand {
+    fn new(stream: TcpStream, _active_queues: &mut HashMap<u16, IoQueue>, qid: u16, cid: u16) -> WriteCommand {
+        WriteCommand {
+            stream,
+            active_queues: Default::default(),
+            qid,
+            cid,
+        }
+    }
+
+    async fn handle(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
+}
+
+// let's write a test case that connects to the TCP port in the main function
+// and sends a Create Connection command
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::{Read, Write};
+    use std::net::TcpStream;
+    use std::thread;
+    use std::time::Duration;
+
+    #[test]
+    fn test_create_connection() {
+        // Start the server in a separate thread
+        thread::spawn(|| {
+            main().unwrap();
+        });
+
+        // Wait for the server to start
+        thread::sleep(Duration::from_secs(1));
+
+        // Connect to the server
+        let mut stream = TcpStream::connect("127.0.0.1:8420").unwrap();
+
+        // Send a Create Connection command. Refactor with constant names
+        stream.write(&[0]); // opcode
+        stream.write(&[0]); // flags
+        stream.write(&[0, 0, 0, 0]); // reserved
+        stream.write(&[0, 0, 0, 0]); // cid
+        stream.write(&[0, 0, 0, 0]); // nsid
+        stream.write(&[0, 0]); // reserved
+        stream.write(&[0, 0]); // qid
+        stream.write(&[0, 0]); // sqsize
+        stream.write(&[0, 0]); // cqsize
+        stream.write(&[0, 0, 0, 0]); // maxdata
+        stream.write(&[0, 0]); // assocqid
+        stream.write(&[0, 0]); // reserved
+
+        // Read the response
+        let mut response = [0u8; 8];
+        stream.read_exact(&mut response).unwrap();
+
+        // The response should be a success
+        assert_eq!(response, [0, 0, 0, 0, 0, 0, 0, 0]);
+
     }
 }
 ```
